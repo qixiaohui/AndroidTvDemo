@@ -1,0 +1,6 @@
+<root>
+  <item
+      name='java.lang.reflect.Method java.lang.Object invoke(java.lang.Object, java.lang.Object...)'>
+    <annotation name='android.support.annotation.Nullable' />
+  </item>
+</root>
