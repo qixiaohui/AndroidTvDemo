@@ -2,7 +2,7 @@ var express = require('express');
 var app = express();
 var call = require('./api/api');
 
-app.get('/', function (req, res) {
+app.get('/movies', function (req, res) {
     call.read(res);
 });
 

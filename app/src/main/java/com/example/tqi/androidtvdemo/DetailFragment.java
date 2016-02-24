@@ -1,10 +1,8 @@
 package com.example.tqi.androidtvdemo;
 
-import android.app.Fragment;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v17.leanback.app.DetailsFragment;
 import android.support.v17.leanback.widget.Action;
@@ -21,17 +19,21 @@ import android.support.v17.leanback.widget.Presenter;
 import android.support.v17.leanback.widget.Row;
 import android.support.v17.leanback.widget.RowPresenter;
 import android.support.v17.leanback.widget.SparseArrayObjectAdapter;
+import android.util.Log;
 
 import com.example.tqi.androidtvdemo.dao.MoviesGateway;
+import com.example.tqi.androidtvdemo.dao.RestClient;
 import com.example.tqi.pojo.Movie;
-import com.example.tqi.pojo.Pojo;
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import com.squareup.picasso.Picasso;
 import com.squareup.picasso.Target;
 
 import java.lang.reflect.Type;
 import java.util.List;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 /**
  * Created by TQi on 2/19/16.
@@ -44,6 +46,7 @@ public class DetailFragment extends DetailsFragment implements OnItemViewClicked
     private ArrayObjectAdapter adapter;
     private String categroy;
     private DetailsOverviewRow mRow;
+    private MoviesGateway moviesGateway;
     private Target target = new Target() {
         @Override
         public void onBitmapLoaded(Bitmap bitmap, Picasso.LoadedFrom from) {
@@ -74,9 +77,20 @@ public class DetailFragment extends DetailsFragment implements OnItemViewClicked
         loadRelatedMedia(adapter);
         setAdapter(adapter);
         Picasso.with(getActivity()).load(movie.getPosters().getDetailed()).resize(300,400).into(target);
-        DownloadRelatedContent downloadRelatedContent = new DownloadRelatedContent();
-        downloadRelatedContent.execute();
         setOnItemViewClickedListener(this);
+        moviesGateway = RestClient.getGateway();
+        Call<List<Movie>> call = moviesGateway.getRelated(categroy);
+        call.enqueue(new Callback<List<Movie>>() {
+            @Override
+            public void onResponse(Call<List<Movie>> call, Response<List<Movie>> response) {
+                loadRows(response.body());
+            }
+
+            @Override
+            public void onFailure(Call<List<Movie>> call, Throwable t) {
+                Log.e("Error", t.toString());
+            }
+        });
     }
 
     private void loadRelatedMedia(ArrayObjectAdapter adapter){
@@ -127,22 +141,6 @@ public class DetailFragment extends DetailsFragment implements OnItemViewClicked
             intent.putExtra(movieExtra, new Gson().toJson(movie));
             intent.putExtra(categoryExtra, categroy);
             startActivity(intent);
-        }
-    }
-
-    private class DownloadRelatedContent extends AsyncTask<String, String, String>{
-        @Override
-        protected String doInBackground(String... params) {
-            MoviesGateway moviesGateway = new MoviesGateway();
-            String related = moviesGateway.getRelated(categroy);
-            return related;
-        }
-
-        @Override
-        protected void onPostExecute(String related) {
-            Type type = new TypeToken<List<Movie>>(){}.getType();
-            List<Movie> data = new Gson().fromJson(related, type);
-            loadRows(data);
         }
     }
 

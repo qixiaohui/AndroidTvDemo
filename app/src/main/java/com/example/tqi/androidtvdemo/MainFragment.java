@@ -3,7 +3,6 @@ package com.example.tqi.androidtvdemo;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v17.leanback.app.BackgroundManager;
 import android.support.v17.leanback.app.BrowseFragment;
@@ -18,25 +17,22 @@ import android.support.v17.leanback.widget.Row;
 import android.support.v17.leanback.widget.RowPresenter;
 import android.util.DisplayMetrics;
 import android.util.Log;
-import android.view.View;
-import android.widget.AdapterView;
 
 import com.example.tqi.androidtvdemo.dao.MoviesGateway;
+import com.example.tqi.androidtvdemo.dao.RestClient;
 import com.example.tqi.pojo.Movie;
 import com.example.tqi.pojo.Pojo;
 import com.google.gson.Gson;
 import com.squareup.picasso.Picasso;
 import com.squareup.picasso.Target;
 
-
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 
 public class MainFragment extends BrowseFragment implements OnItemViewClickedListener, OnItemViewSelectedListener {
@@ -49,9 +45,9 @@ public class MainFragment extends BrowseFragment implements OnItemViewClickedLis
     private Drawable mDefaultBackground;
     private DisplayMetrics mMetrics;
     private ArrayObjectAdapter objAdapter;
-    private DownloadContent mDownloadTask;
     private ArrayObjectAdapter adapter;
     private CardPresenter presenter;
+    private MoviesGateway moviesGateway;
     private Target target = new Target() {
         @Override
         public void onBitmapLoaded(Bitmap bitmap, Picasso.LoadedFrom from) {
@@ -76,12 +72,23 @@ public class MainFragment extends BrowseFragment implements OnItemViewClickedLis
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        mDownloadTask = new DownloadContent();
-        mDownloadTask.execute();
         setBgManager();
         loadData();
         setOnItemViewClickedListener(this);
         setOnItemViewSelectedListener(this);
+        moviesGateway = RestClient.getGateway();
+        Call<Pojo> call = moviesGateway.getMovies();
+        call.enqueue(new Callback<Pojo>() {
+            @Override
+            public void onResponse(Call<Pojo> call, Response<Pojo> response) {
+                loadRows(response.body());
+            }
+
+            @Override
+            public void onFailure(Call<Pojo> call, Throwable t) {
+                Log.e("can't get movie", t.toString());
+            }
+        });
     }
 
     private void loadRows(Pojo pojo){
@@ -162,21 +169,6 @@ public class MainFragment extends BrowseFragment implements OnItemViewClickedLis
         setTitle("My media player");
         setHeadersState(HEADERS_ENABLED);
         setHeadersTransitionOnBackEnabled(true);
-    }
-
-    private class DownloadContent extends AsyncTask<String, String, String> {
-        @Override
-        protected String doInBackground(String... params) {
-            MoviesGateway gateway = new MoviesGateway();
-            String movies = gateway.getMovies();
-            return movies;
-        }
-
-        @Override
-        protected void onPostExecute(String movies) {
-            Pojo data = new Gson().fromJson(movies, Pojo.class);
-            loadRows(data);
-        }
     }
 
     @Override
